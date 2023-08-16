@@ -17,27 +17,31 @@ def main():
     print("getting status in loop...")
     servers_ponline = {}
     for i in servers:
-        servers_ponline[i] = {}
+        servers_ponline[i] = {"tg_alert_sended" : "undefined"}
 
     while True:
         for i in servers:
             try:
                 server = JavaServer.lookup(servers[i])
                 status = server.status()
-                servers_ponline[i]["online"] = True
+                servers_ponline[i]["online"] = 'online'
                 servers_ponline[i]["name"] = i
                 servers_ponline[i]["motd"] = status.motd.raw.lstrip()
                 servers_ponline[i]["players_online"] = status.players.online
                 servers_ponline[i]["players_max"] = status.players.max
                 servers_ponline[i]["players_percentage"] = round(status.players.online / status.players.max * 100, 1)
                 servers_ponline[i]["latency"] = round(status.latency)
-                servers_ponline[i]["tg_alert_sended"] = False
-            except:
+                #servers_ponline[i]["tg_alert_sended"] = 'online'
                 if tg_alerts:
-                    if not "tg_alert_sended" in servers_ponline[i] or servers_ponline[i]["tg_alert_sended"] == False :
-                        asyncio.run(error_to_tg(i,"offline"))
-                        servers_ponline[i]["tg_alert_sended"] = True
-                servers_ponline[i]["online"] = False
+                    if servers_ponline[i]["tg_alert_sended"] != servers_ponline[i]["online"]:
+                        asyncio.run(error_to_tg(i,servers_ponline[i]["online"]))
+                        servers_ponline[i]["tg_alert_sended"] = servers_ponline[i]["online"]
+            except:
+                servers_ponline[i]["online"] = 'offline'
+                if tg_alerts:
+                    if servers_ponline[i]["tg_alert_sended"] != servers_ponline[i]["online"]:
+                        asyncio.run(error_to_tg(i,servers_ponline[i]["online"]))
+                        servers_ponline[i]["tg_alert_sended"] = servers_ponline[i]["online"]
 
         print(servers_ponline)
         json_object = json.dumps(servers_ponline, indent=4)
