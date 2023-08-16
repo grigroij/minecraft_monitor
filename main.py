@@ -3,24 +3,14 @@ from mcstatus import JavaServer
 import time
 import telegram
 import json
+from config import *
 
-servers = {
-    "server": "1dedic.stankcraft.ru:25565",
-    "hub": "10.8.0.2:25570",
-    "surv_1": "10.8.0.2:25571"
-}
-
-json_path = "/var/www/html/monitoring.json"
-
-tg_alerts = True
-chat_id = ""
-bot_token = ""
-
-
-async def error_to_tg(server):
-    bot = telegram.Bot(bot_token)
-    async with bot:
-        await bot.send_message(text=f"server {server} went to offline!", chat_id=chat_id)
+async def error_to_tg(server,status):
+    if tg_alerts:
+        print("tg alert initiated for " + str(server))
+        bot = telegram.Bot(bot_token)
+        async with bot:
+            await bot.send_message(text=f"server {server} went to {status}!", chat_id=chat_id)
 
 
 def main():
@@ -32,21 +22,21 @@ def main():
     while True:
         for i in servers:
             try:
-
                 server = JavaServer.lookup(servers[i])
                 status = server.status()
-
                 servers_ponline[i]["online"] = True
-                servers_ponline[i]["tg_alert_sended"] = False
+                servers_ponline[i]["name"] = i
+                servers_ponline[i]["motd"] = status.motd.raw.lstrip()
                 servers_ponline[i]["players_online"] = status.players.online
                 servers_ponline[i]["players_max"] = status.players.max
-                servers_ponline[i]["players_percentage"] = status.players.online / status.players.max * 100
+                servers_ponline[i]["players_percentage"] = round(status.players.online / status.players.max * 100, 1)
+                servers_ponline[i]["latency"] = round(status.latency)
+                servers_ponline[i]["tg_alert_sended"] = False
             except:
-
-                if not "tg_alert_sended" in servers_ponline[i] or servers_ponline[i]["tg_alert_sended"] == False:
-                    print("tg alert initiated for " + str(i))
-                    asyncio.run(error_to_tg(i))
-                    servers_ponline[i]["tg_alert_sended"] = True
+                if tg_alerts:
+                    if not "tg_alert_sended" in servers_ponline[i] or servers_ponline[i]["tg_alert_sended"] == False :
+                        asyncio.run(error_to_tg(i,"offline"))
+                        servers_ponline[i]["tg_alert_sended"] = True
                 servers_ponline[i]["online"] = False
 
         print(servers_ponline)
